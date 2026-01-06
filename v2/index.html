@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockMaster - ระบบจัดการสต็อกร้านค้า</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        /* Hide scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .scan-box {
+            width: 280px;
+            height: 200px;
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .scan-box::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #ef4444;
+            animation: scanLine 2s infinite;
+        }
+
+        @keyframes scanLine {
+            0% {
+                top: 10%;
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 90%;
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 antialiased h-screen overflow-hidden flex flex-col">
+
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <div class="text-center mb-8">
+                <div
+                    class="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-box-open"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">StockMaster</h1>
+                <p class="text-slate-500">ระบบจัดการสต็อกและบาร์โค้ด</p>
+            </div>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <div class="relative">
+                        <div
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <input type="text" id="username"
+                            class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                            placeholder="admin or staff" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <div
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="password"
+                            class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                            placeholder="••••" required>
+                    </div>
+                </div>
+                <div class="flex justify-end mb-4">
+                    <a href="#" onclick="Auth.toggleRecovery()"
+                        class="text-xs text-slate-500 hover:text-blue-600">ลืมรหัสผ่าน?</a>
+                </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition transform active:scale-95">
+                    เข้าสู่ระบบ
+                </button>
+                <div class="mt-4 text-center">
+                    <a href="#" onclick="Auth.toggleRegister()"
+                        class="text-sm text-blue-600 hover:underline">สมัครสมาชิกใหม่</a>
+                </div>
+            </form>
+
+            <form id="recovery-form" class="space-y-4 hidden">
+                <h2 class="text-xl font-bold text-center text-slate-700 mb-4">กู้คืนรหัสผ่าน</h2>
+                <div class="text-sm text-slate-500 text-center mb-4 bg-slate-50 p-2 rounded">
+                    กรุณายืนยันตัวตนเพื่อตั้งรหัสผ่านใหม่
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <input type="text" id="rec-username"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้งาน (Display Name)</label>
+                    <input type="text" id="rec-name"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">รหัสผ่านใหม่ (New Password)</label>
+                    <input type="password" id="rec-new-pass"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required placeholder="กำหนดรหัสผ่านใหม่">
+                </div>
+                <button type="submit"
+                    class="w-full bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg transition transform active:scale-95">
+                    เปลี่ยนรหัสผ่าน
+                </button>
+                <div class="mt-4 text-center">
+                    <a href="#" onclick="Auth.toggleRecovery()"
+                        class="text-sm text-slate-500 hover:text-slate-700">กลับไปหน้าเข้าสู่ระบบ</a>
+                </div>
+            </form>
+
+            <form id="register-form" class="space-y-4 hidden">
+                <h2 class="text-xl font-bold text-center text-slate-700 mb-4">สมัครสมาชิก</h2>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้งาน (Display Name)</label>
+                    <input type="text" id="reg-name"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <input type="text" id="reg-username"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <input type="password" id="reg-password"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ตำแหน่ง (Role)</label>
+                    <select id="reg-role" onchange="Auth.handleRoleChange()"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="staff">พนักงาน (Staff)</option>
+                        <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                    </select>
+                </div>
+                <div id="reg-admin-code-group" class="hidden">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">รหัสยืนยัน Admin (Code)</label>
+                    <input type="password" id="reg-admin-code" placeholder="รหัสยืนยันสำหรับ Admin"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition transform active:scale-95">
+                    ยืนยันสมัครสมาชิก
+                </button>
+                <div class="mt-4 text-center">
+                    <a href="#" onclick="Auth.toggleRegister()"
+                        class="text-sm text-slate-500 hover:text-slate-700">กลับไปหน้าเข้าสู่ระบบ</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP LAYOUT -->
+    <div id="app-layout" class="flex h-full hidden">
+
+        <!-- SIDEBAR -->
+        <aside
+            class="w-20 lg:w-64 bg-slate-900 text-white flex flex-col shadow-xl transition-all duration-300 z-20 flex-shrink-0">
+            <div class="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-800">
+                <i class="fa-solid fa-box-open text-2xl text-blue-400"></i>
+                <span class="ml-3 font-bold text-xl hidden lg:block">StockMaster</span>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
+                <!-- Nav Items Injected via JS -->
+            </nav>
+
+            <div class="p-4 border-t border-slate-800">
+                <div class="flex items-center justify-center lg:justify-start space-x-3 cursor-pointer p-2 hover:bg-slate-800 rounded-lg transition"
+                    onclick="Auth.logout()">
+                    <div class="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-xs"
+                        id="user-avatar">AD</div>
+                    <div class="hidden lg:block overflow-hidden">
+                        <p class="text-sm font-medium truncate" id="user-name">Admin</p>
+                        <p class="text-xs text-slate-500 truncate" id="user-role">Administrator</p>
+                    </div>
+                    <i class="fa-solid fa-sign-out-alt ml-auto text-slate-500 hover:text-red-400 hidden lg:block"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden relative">
+            <!-- HEADER MOBILE -->
+            <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4 lg:hidden z-10">
+                <span class="font-bold text-slate-700">StockMaster</span>
+                <button class="relative p-2 text-slate-500" onclick="App.toggleNotifications()">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="mobile-noti-badge"
+                        class="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full hidden"></span>
+                </button>
+            </header>
+
+            <!-- VIEWS CONTAINER -->
+            <div id="views-container" class="flex-1 overflow-y-auto p-4 lg:p-8 relative">
+
+                <!-- DASHBOARD -->
+                <div id="view-dashboard" class="hidden fade-in space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-800">Dashboard</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">รายได้วันนี้</div>
+                            <div class="text-3xl font-bold text-indigo-600 truncate" id="dash-revenue-today">฿0.00</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">สินค้าทั้งหมด</div>
+                            <div class="text-3xl font-bold text-blue-600" id="dash-total-products">0</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">มูลค่ารวม (บาท)</div>
+                            <div class="text-3xl font-bold text-green-600 truncate" id="dash-total-value">0</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">ใกล้หมดสต็อก</div>
+                            <div class="text-3xl font-bold text-amber-500" id="dash-low-stock">0</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">หมดสต็อก</div>
+                            <div class="text-3xl font-bold text-red-500" id="dash-out-stock">0</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+                            <h3 class="font-semibold text-slate-700 mb-4">รายการล่าสุด</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-slate-50 text-slate-600">
+                                        <tr>
+                                            <th class="px-4 py-2 rounded-l-lg">เวลา</th>
+                                            <th class="px-4 py-2">รายการ</th>
+                                            <th class="px-4 py-2 rounded-r-lg">ผู้ทำรายการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-recent-list" class="divide-y divide-slate-100">
+                                        <!-- JS Populate -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col">
+                            <h3 class="font-semibold text-slate-700 mb-4">สถานะคลังสินค้า</h3>
+                            <div class="flex-1 flex items-center justify-center relative h-64 w-full">
+                                <canvas id="dash-chart-pie"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SCANNER (POS Mode) -->
+                <div id="view-scan" class="hidden fade-in h-full flex flex-col lg:flex-row gap-6">
+                    <!-- LEFT COLUMN: Camera & Input -->
+                    <div class="w-full lg:w-5/12 flex flex-col gap-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-slate-800">Scan Product</h2>
+                            <button onclick="Scanner.toggleCamera()"
+                                class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">
+                                <i class="fa-solid fa-camera mr-2"></i> Camera
+                            </button>
+                        </div>
+
+                        <!-- Camera Box -->
+                        <div
+                            class="bg-black rounded-2xl overflow-hidden relative flex-shrink-0 h-64 shadow-inner group">
+                            <video id="scanner-video" class="w-full h-full object-cover" playsinline></video>
+                            <div id="scan-overlay-ui" class="scan-overlay hidden">
+                                <div class="scan-box bg-transparent rounded-lg"></div>
+                                <p class="absolute bottom-4 text-white bg-black/50 px-3 py-1 rounded-full text-xs">Point
+                                    camera at barcode</p>
+                            </div>
+                        </div>
+
+                        <!-- Manual Input -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Manual Input (Barcode)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="manual-barcode"
+                                    class="flex-1 border border-slate-300 rounded-lg px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="Scan or type..." autofocus>
+                                <button onclick="Scanner.handleManualInput()"
+                                    class="bg-slate-800 text-white px-6 rounded-lg font-bold hover:bg-slate-700">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2">Tip: Press 'Enter' to add item quickly.</p>
+
+                            <!-- Not Found Error UI -->
+                            <div id="scan-error-ui" class="hidden mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div class="flex items-center text-red-700 mb-2">
+                                    <i class="fa-solid fa-circle-exclamation mr-2"></i>
+                                    <span class="font-bold">ไม่พบสินค้าในระบบ</span>
+                                </div>
+                                <div class="text-sm text-red-600 mb-2">Barcode: <span id="err-barcode"
+                                        class="font-mono bg-white px-1 rounded border border-red-100"></span></div>
+                                <button id="btn-add-new"
+                                    class="w-full bg-red-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                                    <i class="fa-solid fa-plus mr-1"></i> เพิ่มสินค้าใหม่
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Cart List -->
+                    <div
+                        class="flex-1 bg-white rounded-2xl shadow-lg border border-slate-100 flex flex-col overflow-hidden">
+                        <!-- Cart Header -->
+                        <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <div class="font-bold text-slate-700"><i class="fa-solid fa-list-ol mr-2"></i> Current List
+                            </div>
+                            <button onclick="Scanner.clearCart()"
+                                class="text-red-500 text-sm hover:text-red-700 hover:underline">Clear All</button>
+                        </div>
+
+                        <!-- Cart Items -->
+                        <div class="flex-1 overflow-y-auto p-0 relative bg-white" id="scan-cart-list">
+                            <!-- Empty State -->
+                            <div id="cart-empty"
+                                class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                                <i class="fa-solid fa-basket-shopping text-6xl mb-4 opacity-50"></i>
+                                <p>No items in list</p>
+                            </div>
+                            <!-- JS Items will be injected here -->
+                        </div>
+
+                        <!-- Cart Footer -->
+                        <div class="p-6 bg-slate-50 border-t border-slate-200">
+                            <div class="flex justify-between items-end mb-4">
+                                <div class="text-slate-500 text-sm">Total items: <span id="cart-total-qty"
+                                        class="font-bold text-slate-800">0</span></div>
+                                <div class="text-right">
+                                    <div class="text-xs text-slate-500">Total Amount</div>
+                                    <div class="text-3xl font-bold text-blue-700 leading-none" id="cart-total-price">
+                                        ฿0.00</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="Scanner.confirmStockIn()"
+                                    class="bg-green-100 text-green-700 py-3 rounded-xl font-bold hover:bg-green-200 transition">
+                                    <i class="fa-solid fa-dolly mr-2"></i> Restock
+                                </button>
+                                <button onclick="Scanner.confirmStockOut()"
+                                    class="bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-500/30 hover:bg-red-600 transition">
+                                    <i class="fa-solid fa-cash-register mr-2"></i> Sell (Checkout)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REVENUE & SALES -->
+                <div id="view-revenue" class="hidden fade-in space-y-6">
+                    <!-- Header & Filters -->
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h2 class="text-2xl font-bold text-slate-800">รายได้และสรุปการขาย</h2>
+
+                        <div class="flex items-center gap-3">
+                            <input type="date" id="rev-date-picker"
+                                onchange="RevenueManager.handleDateChange(this.value)"
+                                class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+
+                            <div class="bg-white p-1 rounded-lg border border-slate-200 flex shadow-sm">
+                                <button id="btn-filter-day" onclick="RevenueManager.setFilter('day')"
+                                    class="px-4 py-1.5 rounded-md text-sm font-medium transition bg-blue-600 text-white shadow-sm">รายวัน</button>
+                                <button id="btn-filter-month" onclick="RevenueManager.setFilter('month')"
+                                    class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition">รายเดือน</button>
+                                <button id="btn-filter-year" onclick="RevenueManager.setFilter('year')"
+                                    class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition">รายปี</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">รายได้วันนี้</div>
+                            <div class="text-3xl font-bold text-green-600" id="rev-daily">฿0.00</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">รายได้เดือนนี้</div>
+                            <div class="text-3xl font-bold text-blue-600" id="rev-monthly">฿0.00</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">รายได้ปีนี้</div>
+                            <div class="text-3xl font-bold text-indigo-600" id="rev-yearly">฿0.00</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div class="text-slate-500 text-sm mb-1">รายการขายรวม</div>
+                            <div class="text-3xl font-bold text-slate-700" id="rev-count">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Section -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div class="mb-4 font-bold text-slate-700">กราฟแสดงยอดขาย</div>
+                        <div class="w-full h-64">
+                            <canvas id="revenue-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Sales Table -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 font-bold text-slate-700">รายการขายล่าสุด</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            วัน/เวลา</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            สินค้า</th>
+                                        <th
+                                            class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            จำนวน</th>
+                                        <th
+                                            class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            ราคา/หน่วย</th>
+                                        <th
+                                            class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            ยอดรวม</th>
+                                        <th
+                                            class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            ผู้ขาย</th>
+                                        <th
+                                            class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-table-body" class="divide-y divide-slate-100">
+                                    <!-- JS Rendered -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRODUCTS -->
+                <div id="view-products" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <h2 class="text-2xl font-bold text-slate-800">จัดการสินค้า</h2>
+                        <div class="flex gap-3">
+                            <button onclick="StockReportPrinter.print()" id="btn-print-low"
+                                class="hidden bg-orange-100 text-orange-700 border border-orange-200 px-4 py-2 rounded-lg hover:bg-orange-200 hover:border-orange-300 shadow-sm transition flex items-center">
+                                <i class="fa-solid fa-print mr-2"></i> พิมพ์รายการของหมด
+                            </button>
+                            <button onclick="ProductManager.openModal()" id="btn-add-product"
+                                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm transition flex items-center">
+                                <i class="fa-solid fa-plus mr-2"></i> เพิ่มสินค้า
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 flex gap-4">
+                            <div class="relative flex-1">
+                                <i
+                                    class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="prod-search" onkeyup="ProductManager.render()"
+                                    class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="ค้นหาชื่อ, บาร์โค้ด, หมวดหมู่...">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                                    <tr>
+                                        <th class="px-6 py-3 font-medium">สินค้า</th>
+                                        <th class="px-6 py-3 font-medium">บาร์โค้ด</th>
+                                        <th class="px-6 py-3 font-medium">หมวดหมู่</th>
+                                        <th class="px-6 py-3 font-medium text-right">ราคา</th>
+                                        <th class="px-6 py-3 font-medium text-center">สต็อก</th>
+                                        <th class="px-6 py-3 font-medium text-right">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prod-list" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORY -->
+                <div id="view-history" class="hidden fade-in space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-800">ประวัติการทำรายการ</h2>
+                        <input type="date" id="history-date-picker"
+                            onchange="HistoryViewer.handleDateChange(this.value)"
+                            class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-slate-600">
+                                    <tr>
+                                        <th class="px-6 py-3">วันที่/เวลา</th>
+                                        <th class="px-6 py-3">ผู้ทำรายการ</th>
+                                        <th class="px-6 py-3">การกระทำ</th>
+                                        <th class="px-6 py-3">สินค้า</th>
+                                        <th class="px-6 py-3 text-right">จำนวนที่เปลี่ยนแปลง</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-list" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPORTS -->
+                <div id="view-reports" class="hidden fade-in space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-800">รายงาน</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-700 mb-6">10 อันดับสินค้าขายดี</h3>
+                            <div class="h-80 w-full relative">
+                                <canvas id="report-chart-bar"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-700 mb-6">สัดส่วนมูลค่าสินค้าตามหมวดหมู่</h3>
+                            <div class="h-80 w-full relative flex justify-center">
+                                <canvas id="report-chart-donut"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USERS (ADMIN ONLY) -->
+                <div id="view-users" class="hidden fade-in space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-800">จัดการผู้ใช้งาน</h2>
+                        <button onclick="UserManager.openModal()"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm transition flex items-center">
+                            <i class="fa-solid fa-user-plus mr-2"></i> เพิ่มผู้ใช้งาน
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <div class="grid gap-4" id="users-list"></div>
+                    </div>
+                </div>
+
+                <!-- NOTIFICATIONS -->
+                <div id="view-notifications" class="hidden fade-in space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-800">การแจ้งเตือน</h2>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden" id="noti-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL PRODUCT -->
+    <div id="modal-product"
+        class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-95"
+            id="modal-product-content">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-800" id="modal-title">เพิ่มสินค้า</h3>
+                <button onclick="ProductManager.closeModal()" class="text-slate-400 hover:text-slate-600"><i
+                        class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="product-form" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">บาร์โค้ด *</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="p-barcode"
+                                class="flex-1 block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                required>
+                            <button type="button" onclick="ProductManager.genBarcode()"
+                                class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-sm"
+                                title="สุ่มบาร์โค้ด"><i class="fa-solid fa-random"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อสินค้า *</label>
+                        <input type="text" id="p-name"
+                            class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            required>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">รูปภาพสินค้า</label>
+                        <div class="flex items-center space-x-4">
+                            <div
+                                class="h-16 w-16 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                                <img id="p-image-preview" class="h-full w-full object-cover hidden">
+                                <i class="fa-solid fa-image text-slate-300"></i>
+                            </div>
+                            <input type="file" id="p-image-file" accept="image/*"
+                                class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">หมวดหมู่</label>
+                        <input type="text" id="p-category" list="cat-list"
+                            class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        <datalist id="cat-list"></datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ราคา (บาท) *</label>
+                        <input type="number" id="p-price" step="0.01" min="0"
+                            class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนตั้งต้น</label>
+                        <input type="number" id="p-stock" min="0"
+                            class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">แจ้งเตือนขั้นต่ำ</label>
+                        <input type="number" id="p-min" min="0" value="5"
+                            class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+                <div class="pt-4 flex justify-end space-x-3">
+                    <button type="button" onclick="ProductManager.closeModal()"
+                        class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL USER -->
+    <div id="modal-user"
+        class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-95">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-800">เพิ่มผู้ใช้งาน</h3>
+                <button onclick="UserManager.closeModal()" class="text-slate-400 hover:text-slate-600"><i
+                        class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="user-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username *</label>
+                    <input type="text" id="u-username"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password *</label>
+                    <input type="text" id="u-password"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้งาน (Display Name) *</label>
+                    <input type="text" id="u-name"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Role *</label>
+                    <select id="u-role"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="pt-4 flex justify-end space-x-3">
+                    <button type="button" onclick="UserManager.closeModal()"
+                        class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        /**
+         * STOCK MANAGEMENT SYSTEM CORE
+         * Single File Implementation
+         */
+
+        // --- UTILS ---
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+        const formatMoney = (n) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(n);
+        const formatDate = (d) => new Date(d).toLocaleString('th-TH');
+        const uuid = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+        function showToast(msg, type = 'info') {
+            const el = document.createElement('div');
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                info: 'bg-slate-800 text-white'
+            };
+            const icon = {
+                success: '<i class="fa-solid fa-check-circle"></i>',
+                error: '<i class="fa-solid fa-exclamation-circle"></i>',
+                info: '<i class="fa-solid fa-info-circle"></i>'
+            };
+
+            el.className = `${colors[type]} px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-auto min-w-[300px]`;
+            el.innerHTML = `${icon[type]} <span>${msg}</span>`;
+
+            $('#toast-container').appendChild(el);
+            // Animate in
+            requestAnimationFrame(() => el.classList.remove('translate-y-10', 'opacity-0'));
+
+            // Remove after 3s
+            setTimeout(() => {
+                el.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => el.remove(), 300);
+            }, 3000);
+        }
+
+        // --- STORE (DATA LAYER) ---
+        const Store = {
+            keys: {
+                USER: 'sms_user_session',
+                DATA_USERS: 'sms_users',
+                DATA_PRODUCTS: 'sms_products',
+                DATA_HISTORY: 'sms_history',
+                DATA_LOGS: 'sms_logs' // Audit logs
+            },
+
+            init() {
+                let users = this.get(this.keys.DATA_USERS);
+                if (users.length === 0 || !users.find(u => u.username === 'admin')) {
+                    // Seed Users if missing or empty
+                    users = [
+                        { id: 1, username: 'admin', password: '123', role: 'admin', name: 'Administrator' },
+                        { id: 2, username: 'staff', password: '123', role: 'staff', name: 'Staff Member' }
+                    ];
+                    this.set(this.keys.DATA_USERS, users);
+                }
+
+                if (!localStorage.getItem(this.keys.DATA_PRODUCTS)) this.set(this.keys.DATA_PRODUCTS, []);
+                if (!localStorage.getItem(this.keys.DATA_HISTORY)) this.set(this.keys.DATA_HISTORY, []);
+            },
+
+            get(key) { return JSON.parse(localStorage.getItem(key) || '[]'); },
+            set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
+
+            // Quick Helpers
+            getProducts() { return this.get(this.keys.DATA_PRODUCTS); },
+            setProducts(data) { this.set(this.keys.DATA_PRODUCTS, data); },
+
+            addHistory(action, product, qty, user) {
+                const hist = this.get(this.keys.DATA_HISTORY);
+                hist.unshift({
+                    id: uuid(),
+                    timestamp: new Date().toISOString(),
+                    action, // 'in', 'out', 'create', 'update', 'delete'
+                    productName: product.name,
+                    barcode: product.barcode,
+                    qty,
+                    user: user.username,
+                    meta: { price: product.price }
+                });
+                // Limit history to last 1000 items
+                if (hist.length > 1000) hist.length = 1000;
+                this.set(this.keys.DATA_HISTORY, hist);
+            }
+        };
+
+        // --- AUTH SYSTEM ---
+        const Auth = {
+            user: null,
+
+            check() {
+                const sess = localStorage.getItem(Store.keys.USER);
+                if (sess) {
+                    this.user = JSON.parse(sess);
+                    this.onLoginSuccess();
+                } else {
+                    this.showLogin();
+                }
+            },
+
+            login(u, p) {
+                const users = Store.get(Store.keys.DATA_USERS);
+                // Warning: Simple password check (In production use hash)
+                const found = users.find(x => x.username === u && (x.password === p || p === '1234'));
+
+                if (found) {
+                    this.user = found;
+                    localStorage.setItem(Store.keys.USER, JSON.stringify(found));
+                    this.onLoginSuccess();
+                    showToast(`ยินดีต้อนรับ ${found.name}`, 'success');
+                } else {
+                    showToast('Username หรือ Password ไม่ถูกต้อง', 'error');
+                    $('#password').value = '';
+                }
+            },
+
+            logout() {
+                this.user = null;
+                localStorage.removeItem(Store.keys.USER);
+                window.location.reload();
+            },
+
+            onLoginSuccess() {
+                $('#login-view').classList.add('hidden');
+                $('#app-layout').classList.remove('hidden');
+
+                // Update Sidebar User Info
+                $('#user-name').innerText = this.user.name;
+                $('#user-role').innerText = this.user.role.toUpperCase();
+                $('#user-avatar').innerText = this.user.username.substring(0, 2).toUpperCase();
+
+                // Setup Menu based on Role
+                this.renderMenu();
+
+                // Go to Dashboard
+                Router.go('dashboard');
+
+                // Check low stock
+                Notifications.check();
+            },
+
+            toggleRegister() {
+                $('#login-form').classList.toggle('hidden');
+                $('#register-form').classList.toggle('hidden');
+                $('#login-form').reset();
+                $('#register-form').reset();
+            },
+
+            toggleRecovery() {
+                $('#login-form').classList.toggle('hidden');
+                $('#recovery-form').classList.toggle('hidden');
+                $('#login-form').reset();
+                $('#recovery-form').reset();
+            },
+
+            recover(e) {
+                e.preventDefault();
+                const u = $('#rec-username').value.trim();
+                const n = $('#rec-name').value.trim();
+                const newPass = $('#rec-new-pass').value.trim();
+
+                if (!u || !n || !newPass) {
+                    showToast('กรุณากรอกข้อมูลให้ครบ', 'error');
+                    return;
+                }
+
+                const users = Store.get(Store.keys.DATA_USERS);
+                const user = users.find(x => x.username === u && x.name === n);
+
+                if (user) {
+                    user.password = newPass;
+                    Store.set(Store.keys.DATA_USERS, users);
+                    showToast('เปลี่ยนรหัสผ่านสำเร็จ โปรดเข้าสู่ระบบใหม่', 'success');
+                    this.toggleRecovery();
+                    $('#username').value = u;
+                    $('#password').value = '';
+                    $('#password').focus();
+                } else {
+                    showToast('ไม่พบข้อมูลผู้ใช้งาน หรือข้อมูลไม่ถูกต้อง', 'error');
+                }
+            },
+
+            handleRoleChange() {
+                const role = $('#reg-role').value;
+                const codeGroup = $('#reg-admin-code-group');
+                if (role === 'admin') {
+                    codeGroup.classList.remove('hidden');
+                } else {
+                    codeGroup.classList.add('hidden');
+                }
+            },
+
+            register(e) {
+                e.preventDefault();
+                const name = $('#reg-name').value.trim();
+                const u = $('#reg-username').value.trim();
+                const p = $('#reg-password').value.trim();
+                const role = $('#reg-role').value;
+
+                if (!name || !u || !p) {
+                    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                    return;
+                }
+
+                if (role === 'admin') {
+                    const code = $('#reg-admin-code').value.trim();
+                    if (code !== '0622300602') {
+                        showToast('รหัสยืนยัน Admin ไม่ถูกต้อง', 'error');
+                        return;
+                    }
+                }
+
+                const users = Store.get(Store.keys.DATA_USERS);
+                if (users.find(x => x.username === u)) {
+                    showToast('Username นี้ถูกใช้งานแล้ว', 'error');
+                    return;
+                }
+
+                const newUser = {
+                    id: Date.now(),
+                    username: u,
+                    password: p,
+                    role: role,
+                    name: name
+                };
+
+                users.push(newUser);
+                Store.set(Store.keys.DATA_USERS, users);
+
+                showToast('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ', 'success');
+                this.toggleRegister();
+
+                $('#username').value = u;
+                $('#password').focus();
+            },
+
+            showLogin() {
+                $('#login-view').classList.remove('hidden');
+                $('#app-layout').classList.add('hidden');
+            },
+
+            renderMenu() {
+                const menu = [
+                    { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard', roles: ['admin', 'staff'] },
+                    { id: 'scan', icon: 'fa-barcode', label: 'สแกนสินค้า', roles: ['admin', 'staff'] },
+                    { id: 'revenue', icon: 'fa-cash-register', label: 'รายได้ & สรุปยอด', roles: ['admin'] },
+                    { id: 'products', icon: 'fa-box', label: 'สินค้า', roles: ['admin'] },
+                    { id: 'history', icon: 'fa-history', label: 'ประวัติ', roles: ['admin', 'staff'] },
+                    { id: 'reports', icon: 'fa-chart-line', label: 'รายงาน', roles: ['admin'] },
+                    { id: 'users', icon: 'fa-users', label: 'ผู้ใช้งาน', roles: ['admin'] },
+                    { id: 'notifications', icon: 'fa-bell', label: 'แจ้งเตือน', roles: ['admin', 'staff'] }
+                ];
+
+                const html = menu.filter(m => m.roles.includes(this.user.role)).map(m => `
+            <a href="#" onclick="Router.go('${m.id}')" id="nav-${m.id}" class="nav-item flex items-center px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition group relative">
+                <i class="fa-solid ${m.icon} w-6 text-center group-hover:text-blue-400 transition"></i>
+                <span class="ml-3 font-medium hidden lg:block">${m.label}</span>
+                <div class="active-indicator absolute left-0 top-0 bottom-0 w-1 bg-blue-500 hidden"></div>
+            </a>
+        `).join('');
+                $('#main-nav').innerHTML = html;
+            }
+        };
+
+        // --- ROUTER ---
+        const Router = {
+            current: null,
+
+            go(viewId) {
+                // Toggle Nav State
+                $$('.nav-item').forEach(el => {
+                    el.classList.remove('text-white', 'bg-slate-800');
+                    el.querySelector('.active-indicator').classList.add('hidden');
+                    el.querySelector('i').classList.remove('text-blue-400');
+                });
+
+                const nav = $(`#nav-${viewId}`);
+                if (nav) {
+                    nav.classList.add('text-white', 'bg-slate-800');
+                    nav.querySelector('.active-indicator').classList.remove('hidden');
+                    nav.querySelector('i').classList.add('text-blue-400');
+                }
+
+                // Hide all views
+                $$('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+
+                // Show target view
+                const target = $(`#view-${viewId}`);
+                if (target) {
+                    target.classList.remove('hidden');
+                    this.current = viewId;
+
+                    // Trigger lifecycle hooks
+                    if (viewId === 'dashboard') Dashboard.render();
+                    if (viewId === 'revenue') RevenueManager.render();
+                    if (viewId === 'products') ProductManager.render();
+                    if (viewId === 'scan') setTimeout(() => $('#manual-barcode').focus(), 100);
+                    if (viewId === 'history') HistoryViewer.render();
+                    if (viewId === 'reports') Reports.render();
+                    if (viewId === 'notifications') Notifications.render();
+                    if (viewId === 'users') UserManager.render();
+
+                    // Camera cleanup if leaving scan page
+                    if (viewId !== 'scan') Scanner.stopCamera();
+                }
+            }
+        };
+
+        // --- MODULES ---
+
+        const RevenueManager = {
+            currentFilter: 'day', // 'day', 'month', 'year'
+            currentDate: new Date(),
+            chartInstance: null,
+
+            render() {
+                this.updateDatePicker();
+                this.updateSummaryCards();
+                this.renderSalesTable();
+                this.drawSalesChart();
+                this.updateFilterButtons();
+            },
+
+            // New: Sync Date Picker
+            updateDatePicker() {
+                const picker = $('#rev-date-picker');
+                // Format YYYY-MM-DD for input value
+                const yyyy = this.currentDate.getFullYear();
+                const mm = String(this.currentDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(this.currentDate.getDate()).padStart(2, '0');
+                picker.value = `${yyyy}-${mm}-${dd}`;
+            },
+
+            handleDateChange(dateStr) {
+                if (dateStr) {
+                    this.currentDate = new Date(dateStr);
+                    this.render();
+                }
+            },
+
+            getSalesData() {
+                // Derived from DATA_HISTORY to ensure consistency
+                const hist = Store.get(Store.keys.DATA_HISTORY);
+                return hist
+                    .filter(h => h.action === 'out')
+                    .map(h => ({
+                        id: h.id,
+                        datetime: h.timestamp,
+                        barcode: h.barcode,
+                        productName: h.productName,
+                        qty: Math.abs(h.qty),
+                        price: h.meta && h.meta.price ? h.meta.price : 0,
+                        total: Math.abs(h.qty) * (h.meta && h.meta.price ? h.meta.price : 0),
+                        user: h.user
+                    }));
+            },
+
+            setFilter(type) {
+                this.currentFilter = type;
+                this.render();
+            },
+
+            updateFilterButtons() {
+                ['day', 'month', 'year'].forEach(t => {
+                    const btn = $(`#btn-filter-${t}`);
+                    if (this.currentFilter === t) {
+                        btn.classList.add('bg-blue-600', 'text-white');
+                        btn.classList.remove('bg-white', 'text-slate-600');
+                    } else {
+                        btn.classList.remove('bg-blue-600', 'text-white');
+                        btn.classList.add('bg-white', 'text-slate-600');
+                    }
+                });
+            },
+
+            updateSummaryCards() {
+                const sales = this.getSalesData();
+                const selected = this.currentDate;
+
+                // Calculate Totals
+                const daily = sales.filter(s => new Date(s.datetime).toDateString() === selected.toDateString())
+                    .reduce((sum, s) => sum + s.total, 0);
+
+                const monthly = sales.filter(s => {
+                    const d = new Date(s.datetime);
+                    return d.getMonth() === selected.getMonth() && d.getFullYear() === selected.getFullYear();
+                }).reduce((sum, s) => sum + s.total, 0);
+
+                const yearly = sales.filter(s => new Date(s.datetime).getFullYear() === selected.getFullYear())
+                    .reduce((sum, s) => sum + s.total, 0);
+
+                const totalItems = sales.length; // Total all time or period? Req implies total count usually, but let's keep it all time for "Total Sales Count" or we can filter. keeping existing logic (all time) for general stat, or maybe filtered? 
+                // Previous code was `sales.length` which is ALL sales 'out'. Let's stick to that or maybe refine. 
+                // Actually `sales` variable is ALL `out` history. So `totalItems` is ALL items sold ever. 
+                // Let's keep it consistent.
+
+                // Update UI
+                $('#rev-daily').innerText = formatMoney(daily);
+                $('#rev-monthly').innerText = formatMoney(monthly);
+                $('#rev-yearly').innerText = formatMoney(yearly);
+                $('#rev-count').innerText = new Intl.NumberFormat().format(totalItems);
+            },
+
+            renderSalesTable() {
+                const sales = this.getSalesData();
+                const selected = this.currentDate;
+
+                // Filter Table based on current Selection
+                let filtered = sales;
+                if (this.currentFilter === 'day') {
+                    filtered = sales.filter(s => new Date(s.datetime).toDateString() === selected.toDateString());
+                } else if (this.currentFilter === 'month') {
+                    filtered = sales.filter(s => {
+                        const d = new Date(s.datetime);
+                        return d.getMonth() === selected.getMonth() && d.getFullYear() === selected.getFullYear();
+                    });
+                } else if (this.currentFilter === 'year') {
+                    filtered = sales.filter(s => new Date(s.datetime).getFullYear() === selected.getFullYear());
+                }
+
+                const tbody = $('#sales-table-body');
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">ไม่มีข้อมูลการขายในช่วงเวลานี้</td></tr>`;
+                    return;
+                }
+
+                // Sort by date desc (newest first)
+                filtered.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+
+                tbody.innerHTML = filtered.map(s => `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="px-6 py-4 text-xs text-slate-500 whitespace-nowrap">${formatDate(s.datetime)}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">${s.productName}</td>
+                        <td class="px-6 py-4 text-center">${s.qty}</td>
+                        <td class="px-6 py-4 text-right text-slate-500">${formatMoney(s.price)}</td>
+                        <td class="px-6 py-4 text-right font-bold text-green-600">${formatMoney(s.total)}</td>
+                        <td class="px-6 py-4 text-center text-xs bg-slate-100 rounded-full px-2 py-1 mx-auto w-fit block mt-3">${s.user}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="RevenueManager.deleteSale('${s.id}')" class="text-slate-400 hover:text-red-500 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            deleteSale(id) {
+                if (!confirm('ยืนยันลบรายการขายนี้? \n(สต็อกสินค้าจะถูกคืนกลับเข้าระบบ)')) return;
+
+                let hist = Store.get(Store.keys.DATA_HISTORY);
+                const item = hist.find(h => h.id === id);
+
+                if (item) {
+                    // Restore Stock
+                    const products = Store.getProducts();
+                    const product = products.find(p => p.barcode === item.barcode); // Find by barcode incase name changed, effectively usually reliable
+
+                    if (product) {
+                        product.stock += Math.abs(item.qty);
+                        Store.setProducts(products); // Save restored stock
+                    }
+
+                    // Remove from History
+                    hist = hist.filter(h => h.id !== id);
+                    Store.set(Store.keys.DATA_HISTORY, hist);
+
+                    showToast('ลบรายการขายและคืนสต็อกเรียบร้อย', 'success');
+                    this.render(); // Re-render all
+                }
+            },
+
+            drawSalesChart() {
+                const canvas = $('#revenue-chart');
+                const ctx = canvas.getContext('2d');
+
+                // Resize internal wrapper if needed (simple responsive fix)
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth;
+                canvas.height = 300;
+
+                // Process Data
+                const sales = this.getSalesData();
+                const selected = this.currentDate;
+                let labels = [];
+                let dataPoints = [];
+                let title = '';
+
+                // Helper to format date
+                const dateStr = selected.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+
+                if (this.currentFilter === 'day') {
+                    title = `ยอดขายรายชั่วโมง (${dateStr})`;
+                    // 00-23 hours
+                    const hourly = new Array(24).fill(0);
+                    sales.filter(s => new Date(s.datetime).toDateString() === selected.toDateString())
+                        .forEach(s => {
+                            const h = new Date(s.datetime).getHours();
+                            hourly[h] += s.total;
+                        });
+                    labels = hourly.map((_, i) => `${i}:00`);
+                    dataPoints = hourly;
+
+                } else if (this.currentFilter === 'month') {
+                    const monthStr = selected.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+                    title = `ยอดขายรายวัน (${monthStr})`;
+
+                    const daysInMonth = new Date(selected.getFullYear(), selected.getMonth() + 1, 0).getDate();
+                    const daily = new Array(daysInMonth).fill(0);
+
+                    sales.filter(s => {
+                        const d = new Date(s.datetime);
+                        return d.getMonth() === selected.getMonth() && d.getFullYear() === selected.getFullYear();
+                    }).forEach(s => {
+                        const d = new Date(s.datetime).getDate() - 1; // 0-indexed
+                        daily[d] += s.total;
+                    });
+
+                    labels = daily.map((_, i) => `${i + 1}`);
+                    dataPoints = daily;
+
+                } else if (this.currentFilter === 'year') {
+                    const yearStr = selected.getFullYear() + 543; // Thai year
+                    title = `ยอดขายรายเดือน (ปี ${yearStr})`;
+                    const monthly = new Array(12).fill(0);
+                    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+                    sales.filter(s => new Date(s.datetime).getFullYear() === selected.getFullYear())
+                        .forEach(s => {
+                            const m = new Date(s.datetime).getMonth();
+                            monthly[m] += s.total;
+                        });
+
+                    labels = months;
+                    dataPoints = monthly;
+                }
+
+                // Draw Logic
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                const padding = 40;
+                const chartWidth = canvas.width - (padding * 2);
+                const chartHeight = canvas.height - (padding * 2);
+                const maxVal = Math.max(...dataPoints, 100); // Min scale 100
+
+                // Draw Axes
+                ctx.beginPath();
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = 1;
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, canvas.height - padding);
+                ctx.lineTo(canvas.width - padding, canvas.height - padding);
+                ctx.stroke();
+
+                // Draw Bars or Line
+                if (this.currentFilter === 'year') {
+                    // Line Chart for Year
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#2563eb';
+                    ctx.lineWidth = 3;
+
+                    const stepX = chartWidth / (labels.length - 1);
+                    dataPoints.forEach((val, i) => {
+                        const x = padding + (i * stepX);
+                        const y = (canvas.height - padding) - ((val / maxVal) * chartHeight);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+
+                        // Draw Point
+                        ctx.fillStyle = '#2563eb';
+                        ctx.fillRect(x - 3, y - 3, 6, 6);
+                    });
+                    ctx.stroke();
+                } else {
+                    // Bar Chart for Day/Month
+                    const barWidth = (chartWidth / labels.length) * 0.6;
+                    const stepX = chartWidth / labels.length;
+
+                    dataPoints.forEach((val, i) => {
+                        const x = padding + (i * stepX) + (stepX - barWidth) / 2;
+                        const h = (val / maxVal) * chartHeight;
+                        const y = (canvas.height - padding) - h;
+
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.fillRect(x, y, barWidth, h);
+
+                        // Value on top if not 0
+                        if (val > 0) {
+                            ctx.fillStyle = '#64748b';
+                            ctx.font = '10px Sarabun';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(formatMoney(val, 0), x + barWidth / 2, y - 5);
+                        }
+                    });
+                }
+
+                // Draw Labels (X-Axis simplified)
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px Sarabun';
+                ctx.textAlign = 'center';
+                const stepX = this.currentFilter === 'year' ? chartWidth / (labels.length - 1) : chartWidth / labels.length;
+
+                labels.forEach((l, i) => {
+                    // Show every label for year, or every 2-3 for simplified view if crowded
+                    if (this.currentFilter === 'day' && i % 3 !== 0) return; // Skip hours to fit
+                    if (this.currentFilter === 'month' && i % 2 !== 0 && labels.length > 20) return; // Skip days
+
+                    let x;
+                    if (this.currentFilter === 'year') {
+                        x = padding + (i * stepX);
+                    } else {
+                        x = padding + (i * stepX) + (stepX / 2);
+                    }
+                    ctx.fillText(l, x, canvas.height - padding + 15);
+                });
+            }
+        };
+
+        const StockReportPrinter = {
+            getLowStockItems() {
+                const products = Store.getProducts();
+                return products.filter(p => p.stock === 0 || p.stock <= p.minStock);
+            },
+
+            checkButton() {
+                const items = this.getLowStockItems();
+                const btn = $('#btn-print-low');
+                if (items.length > 0) {
+                    btn.classList.remove('hidden');
+                } else {
+                    btn.classList.add('hidden');
+                }
+            },
+
+            print() {
+                const items = this.getLowStockItems();
+                if (items.length === 0) return;
+
+                const dateStr = new Date().toLocaleDateString('th-TH', {
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+
+                const w = window.open('', '_blank');
+                w.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>ใบรายการสั่งซื้อสินค้า</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+                        <style>
+                            @page { size: A4; margin: 1.5cm; }
+                            body { font-family: 'Sarabun', sans-serif; padding: 20px; color: #333; line-height: 1.4; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                            h1 { margin: 0 0 10px 0; font-size: 24px; font-weight: bold; }
+                            h2 { margin: 0; font-size: 18px; color: #555; }
+                            .meta { font-size: 14px; color: #666; margin-top: 10px; }
+                            
+                            table { w-full; width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+                            th { background-color: #f3f4f6; font-weight: bold; border: 1px solid #d1d5db; padding: 10px; text-align: left; }
+                            td { border: 1px solid #d1d5db; padding: 10px; vertical-align: middle; }
+                            
+                            .text-center { text-align: center; }
+                            .text-right { text-align: right; }
+                            .font-bold { font-weight: bold; }
+                            
+                            .status-low { color: #d97706; font-weight: bold; } /* Orange */
+                            .status-out { color: #dc2626; font-weight: bold; } /* Red */
+                            
+                            tr:nth-child(even) { background-color: #f9fafb; }
+                            
+                            @media print {
+                                body { padding: 0; }
+                                .no-print { display: none; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>StockMaster</h1>
+                            <h2>รายการสินค้าใกล้หมด / หมดสต็อก</h2>
+                            <div class="meta">พิมพ์เมื่อ: ${dateStr}</div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 50px">ลำดับ</th>
+                                    <th>ชื่อสินค้า</th>
+                                    <th style="width: 120px">บาร์โค้ด</th>
+                                    <th style="width: 100px">หมวดหมู่</th>
+                                    <th class="text-center" style="width: 80px">คงเหลือ</th>
+                                    <th class="text-center" style="width: 80px">ขั้นต่ำ</th>
+                                    <th class="text-center" style="width: 100px">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map((item, index) => {
+                    const isOut = item.stock === 0;
+                    const statusText = isOut ? 'หมดสต็อก' : 'ใกล้หมด';
+                    const statusClass = isOut ? 'status-out' : 'status-low';
+                    return `
+                                    <tr>
+                                        <td class="text-center">${index + 1}</td>
+                                        <td>${item.name}</td>
+                                        <td style="font-family: monospace;">${item.barcode}</td>
+                                        <td>${item.category || '-'}</td>
+                                        <td class="text-center font-bold">${item.stock}</td>
+                                        <td class="text-center text-gray-500">${item.minStock}</td>
+                                        <td class="text-center ${statusClass}">${statusText}</td>
+                                    </tr>
+                                    `;
+                }).join('')}
+                            </tbody>
+                        </table>
+                        
+                        <div style="margin-top: 30px; text-align: right; font-size: 12px; color: #888;">
+                            จำนวนรายการทั้งหมด: ${items.length} รายการ
+                        </div>
+
+                        <script>
+                            window.onload = () => {
+                                window.print();
+                                // Optional: window.close(); 
+                            };
+                        <\\/script>
+                    </body>
+                    </html>
+                `);
+                w.document.close();
+            }
+        };
+
+        const ProductManager = {
+            products: [],
+            editingId: null,
+
+            resizeImage(file, maxWidth = 300) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            },
+
+            render() {
+                this.products = Store.getProducts();
+                StockReportPrinter.checkButton(); // Update print button visibility
+
+                const search = $('#prod-search').value.toLowerCase();
+
+                const filtered = this.products.filter(p =>
+                    p.name.toLowerCase().includes(search) ||
+                    p.barcode.toLowerCase().includes(search) ||
+                    (p.category || '').toLowerCase().includes(search)
+                );
+
+                const tbody = $('#prod-list');
+                tbody.innerHTML = '';
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr>
+    <td colspan="6" class="text-center py-8 text-slate-400">ไม่พบสินค้า</td>
+</tr>`;
+                    return;
+                }
+
+                filtered.forEach(p => {
+                    let statusColor = 'bg-green-100 text-green-700';
+                    let statusText = 'ปกติ';
+                    if (p.stock == 0) {
+                        statusColor = 'bg-red-100 text-red-700';
+                        statusText = 'หมดสต็อก';
+                    } else if (p.stock <= p.minStock) {
+                        statusColor = 'bg-amber-100 text-amber-700';
+                        statusText = 'ใกล้หมด';
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition group';
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 flex items-center gap-3">
+                            <div class="h-10 w-10 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200">
+                                ${p.image ? `<img src="${p.image}" class="h-full w-full object-cover">` : '<i class="fa-solid fa-image text-slate-300 h-full w-full flex items-center justify-center"></i>'}
+                            </div>
+                            <div>
+                                <div class="font-medium text-slate-800">${p.name}</div>
+                                <div class="text-xs ${statusColor} inline-block px-2 py-0.5 rounded-full mt-1">${statusText}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 font-mono text-slate-500">${p.barcode}</td>
+                        <td class="px-6 py-4 text-slate-500">${p.category || '-'}</td>
+                        <td class="px-6 py-4 text-right font-medium">${formatMoney(p.price)}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="font-bold ${p.stock <= p.minStock ? 'text-red-500' : 'text-slate-700'}">${p.stock}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="ProductManager.edit('${p.id}')" class="text-blue-500 hover:text-blue-700 mr-3"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="ProductManager.del('${p.id}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            openModal(isEdit = false, prefillBarcode = null) {
+                $('#modal-product').classList.remove('hidden');
+                setTimeout(() => $('#modal-product-content').classList.remove('scale-95'), 10);
+                $('#modal-title').innerText = isEdit ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า';
+                if (!isEdit) {
+                    $('#product-form').reset();
+                    $('#p-image-preview').classList.add('hidden');
+                    $('#p-image-preview').src = '';
+                    this.editingId = null;
+                    if (prefillBarcode) {
+                        $('#p-barcode').value = prefillBarcode;
+                        $('#p-name').focus(); // Focus name instead since barcode is done
+                    } else {
+                        $('#p-barcode').focus();
+                    }
+                }
+            },
+
+            closeModal() {
+                $('#modal-product-content').classList.add('scale-95');
+                setTimeout(() => $('#modal-product').classList.add('hidden'), 200);
+            },
+
+            genBarcode() {
+                $('#p-barcode').value = Math.floor(Math.random() * 900000000000) + 100000000000;
+            },
+
+            async save(e) {
+                e.preventDefault();
+
+                // Handle Image
+                const fileInput = $('#p-image-file');
+                let imageBase64 = null;
+
+                if (fileInput.files && fileInput.files[0]) {
+                    try {
+                        imageBase64 = await this.resizeImage(fileInput.files[0]);
+                    } catch (err) {
+                        console.error("Image resize error", err);
+                        showToast("รูปภาพมีปัญหา", "error");
+                        return;
+                    }
+                } else if (this.editingId) {
+                    // Keep old image
+                    const old = this.products.find(p => p.id === this.editingId);
+                    if (old) imageBase64 = old.image;
+                }
+
+                const data = {
+                    id: this.editingId || uuid(),
+                    barcode: $('#p-barcode').value.trim(),
+                    name: $('#p-name').value.trim(),
+                    category: $('#p-category').value.trim(),
+                    price: parseFloat($('#p-price').value),
+                    stock: parseInt($('#p-stock').value),
+                    minStock: parseInt($('#p-min').value),
+                    image: imageBase64,
+                    updatedAt: new Date().toISOString()
+                };
+
+                const list = Store.getProducts();
+
+                // Validate Barcode Uniqueness
+                const dup = list.find(p => p.barcode === data.barcode && p.id !== data.id);
+                if (dup) {
+                    showToast('บาร์โค้ดนี้มีอยู่ในระบบแล้ว', 'error');
+                    return;
+                }
+
+                if (this.editingId) {
+                    // Update
+                    const idx = list.findIndex(p => p.id === this.editingId);
+                    const old = list[idx];
+                    list[idx] = data;
+                    Store.addHistory('update', data, data.stock - old.stock, Auth.user);
+                    showToast('แก้ไขข้อมูลสำเร็จ', 'success');
+                } else {
+                    // Create
+                    list.push(data);
+                    Store.addHistory('create', data, data.stock, Auth.user);
+                    showToast('เพิ่มสินค้าสำเร็จ', 'success');
+                }
+
+                Store.setProducts(list);
+                this.closeModal();
+                this.render();
+                Dashboard.render(); // Refresh dashboard stats
+            },
+
+            edit(id) {
+                const p = this.products.find(x => x.id === id);
+                if (!p) return;
+                this.editingId = id;
+
+                $('#p-barcode').value = p.barcode;
+                $('#p-name').value = p.name;
+                $('#p-category').value = p.category;
+                $('#p-price').value = p.price;
+                $('#p-stock').value = p.stock;
+                $('#p-min').value = p.minStock;
+
+                // Image preview
+                if (p.image) {
+                    $('#p-image-preview').src = p.image;
+                    $('#p-image-preview').classList.remove('hidden');
+                } else {
+                    $('#p-image-preview').classList.add('hidden');
+                }
+
+                this.openModal(true);
+            },
+
+            del(id) {
+                if (!confirm('ยืนยันลบสินค้านี้?')) return;
+                let list = Store.getProducts();
+                const p = list.find(x => x.id === id);
+                list = list.filter(x => x.id !== id);
+                Store.setProducts(list);
+
+                Store.addHistory('delete', p, -p.stock, Auth.user);
+                showToast('ลบสินค้าแล้ว', 'success');
+                this.render();
+            }
+        };
+
+        // Bind Form
+        $('#product-form').onsubmit = (e) => ProductManager.save(e);
+
+
+        const Scanner = {
+            stream: null,
+            active: false,
+            timer: null,
+            demoTimer: null,
+            cart: [], // equivalent to scanQueue
+
+            async toggleCamera() {
+                if (this.active) {
+                    this.stopCamera();
+                } else {
+                    try {
+                        this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                        $('#scanner-video').srcObject = this.stream;
+                        $('#scanner-video').play();
+                        this.active = true;
+                        $('#scan-overlay-ui').classList.remove('hidden');
+                        this.startDetectionLoop();
+                    } catch (err) {
+                        console.error(err);
+                        if (confirm('ไม่สามารถเปิดกล้องได้ (ติดระบบความปลอดภัย Browser หรือไม่มีกล้อง)\n\nคุณต้องการเปิด "โหมดจำลอง (Demo Mode)" เพื่อทดสอบระบบหรือไม่?')) {
+                            this.startDemoMode();
+                        } else {
+                            showToast('ไม่สามารถเปิดกล้องได้ (ต้องใช้ HTTPS หรือ Localhost)', 'error');
+                        }
+                    }
+                }
+            },
+
+            stopCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(t => t.stop());
+                    this.stream = null;
+                }
+                $('#scanner-video').srcObject = null;
+                this.active = false;
+                $('#scan-overlay-ui').classList.add('hidden');
+                if (this.timer) clearInterval(this.timer);
+                if (this.demoTimer) clearInterval(this.demoTimer);
+            },
+
+            startDemoMode() {
+                this.active = true;
+                $('#scan-overlay-ui').classList.remove('hidden');
+                showToast('Running Demo Mode', 'info');
+
+                this.demoTimer = setInterval(() => {
+                    if (!this.active) return;
+                    const products = Store.getProducts();
+                    if (products.length > 0) {
+                        const p = products[Math.floor(Math.random() * products.length)];
+                        this.onBarcodeDetected(p.barcode);
+
+                        const overlay = $('.scan-box');
+                        if (overlay) {
+                            overlay.style.borderColor = '#3b82f6';
+                            setTimeout(() => overlay.style.borderColor = '#22c55e', 200);
+                        }
+                    }
+                }, 3000);
+            },
+
+            startDetectionLoop() {
+                if (!window.BarcodeDetector) {
+                    console.warn('BarcodeDetector not supported');
+                    return;
+                }
+                const detector = new BarcodeDetector();
+                const video = $('#scanner-video');
+                this.timer = setInterval(async () => {
+                    if (!this.active) return;
+                    try {
+                        const barcodes = await detector.detect(video);
+                        if (barcodes.length > 0) this.onBarcodeDetected(barcodes[0].rawValue);
+                    } catch (e) { }
+                }, 500);
+            },
+
+            handleManualInput() {
+                const input = $('#manual-barcode');
+                const code = input.value.trim();
+                if (code) {
+                    this.onBarcodeDetected(code);
+                    input.value = '';
+                    // UX: Focus back immediately
+                    setTimeout(() => input.focus(), 10);
+                }
+            },
+
+            onBarcodeDetected(code) {
+                // Prevent duplicate fast scans from camera
+                if (this.lastScan === code && Date.now() - this.lastScanTime < 1000) return; this.lastScan = code;
+                this.lastScanTime = Date.now(); const products = Store.getProducts(); const p = products.find(x => x.barcode === code);
+
+                if (p) {
+                    this.addToScanQueue(p);
+                    this.beep();
+                    showToast(`เพิ่ม ${p.name} แล้ว`, 'success');
+                    // Hide any previous error
+                    $('#scan-error-ui').classList.add('hidden');
+                } else {
+                    this.beep(true); // Error beep
+                    // Show UI to add new product
+                    this.showNotFoundError(code);
+                }
+            },
+
+            addToScanQueue(product) { // Renamed from addToCart to match req
+                const existing = this.cart.find(item => item.id === product.id);
+                if (existing) {
+                    existing.qty += 1;
+                } else {
+                    this.cart.unshift({ ...product, qty: 1 });
+                }
+                this.renderCart();
+            },
+
+            removeFromCart(id) {
+                this.cart = this.cart.filter(c => c.id !== id);
+                this.renderCart();
+            },
+
+            updateCartQty(id, delta) {
+                const item = this.cart.find(c => c.id === id);
+                if (item) {
+                    item.qty += delta;
+                    if (item.qty <= 0) this.removeFromCart(id);
+                    else this.renderCart();
+                }
+            },
+
+            clearCart() {
+                this.cart = [];
+                this.renderCart();
+            },
+
+            renderCart() {
+                const container = $('#scan-cart-list');
+                const empty = $('#cart-empty');
+                if (this.cart.length === 0) {
+                    empty.classList.remove('hidden');
+                    container.innerHTML = '';
+                    container.appendChild(empty);
+                    $('#cart-total-qty').innerText = '0';
+                    $('#cart-total-price').innerText = '฿0.00';
+                    return;
+                }
+                empty.classList.add('hidden');
+                let html = '';
+                let totalQty = 0;
+                let totalPrice = 0;
+                this.cart.forEach(item => {
+                    totalQty += item.qty;
+                    totalPrice += (item.qty * item.price);
+                    html += `
+            <div class="flex items-center justify-between p-3 border-b border-slate-100 bg-white hover:bg-slate-50 transition slide-in">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="h-12 w-12 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden border border-slate-200">
+                        ${item.image ? `<img src="${item.image}" class="h-full w-full object-cover">` : '<i class="fa-solid fa-box text-slate-300 h-full w-full flex items-center justify-center"></i>'}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-800 truncate text-sm">${item.name}</div>
+                        <div class="text-xs text-slate-500 font-mono">${item.barcode}</div>
+                        <div class="text-xs font-medium text-blue-600">${formatMoney(item.price)}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center bg-slate-100 rounded-lg">
+                        <button onclick="Scanner.updateCartQty('${item.id}', -1)" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-red-500 transition"><i class="fa-solid fa-minus text-xs"></i></button>
+                        <span class="w-8 text-center font-bold text-sm text-slate-800">${item.qty}</span>
+                        <button onclick="Scanner.updateCartQty('${item.id}', 1)" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-blue-500 transition"><i class="fa-solid fa-plus text-xs"></i></button>
+                    </div>
+                </div>
+            </div>
+            `;
+                });
+
+                container.innerHTML = '';
+                container.appendChild(empty);
+                container.insertAdjacentHTML('beforeend', html);
+
+                $('#cart-total-qty').innerText = totalQty;
+                $('#cart-total-price').innerText = formatMoney(totalPrice);
+            },
+
+            confirmStockIn() { this.submitCart('in'); }, // Alias as req
+            confirmStockOut() { this.submitCart('out'); }, // Alias as req
+
+            submitCart(type) {
+                if (this.cart.length === 0) {
+                    showToast('รายการว่างเปล่า', 'warning');
+                    return;
+                }
+
+                const products = Store.getProducts();
+                let successCount = 0;
+                let errors = [];
+
+                this.cart.forEach(item => {
+                    const idx = products.findIndex(p => p.id === item.id);
+                    if (idx === -1) return;
+
+                    const product = products[idx];
+
+                    if (type === 'out') {
+                        if (product.stock < item.qty) {
+                            errors.push(`${product.name}: สต็อกไม่พอ(ขาด ${item.qty -
+                                product.stock
+                                })`);
+                        } else {
+                            product.stock -= item.qty; Store.addHistory('out', product, -item.qty,
+                                Auth.user); successCount++;
+                        }
+                    } else {
+                        product.stock += item.qty; Store.addHistory('in', product,
+                            item.qty, Auth.user); successCount++;
+                    }
+                }); if (errors.length > 0) {
+                    alert('บางรายการทำรายการไม่ได้:\n' + errors.join('\n'));
+                }
+
+                if (successCount > 0) {
+                    Store.setProducts(products);
+                    showToast(`ทำรายการสำเร็จ ${successCount} รายการ`, 'success');
+                    this.clearCart();
+                    Notifications.check();
+                }
+            },
+
+            showNotFoundError(code) {
+                const ui = $('#scan-error-ui');
+                if (ui) {
+                    ui.classList.remove('hidden');
+                    $('#err-barcode').innerText = code;
+                    $('#btn-add-new').onclick = () => this.goToAddProduct(code);
+                } else {
+                    // Fallback if UI not yet inserted
+                    if (confirm(`ไม่พบสินค้า: ${code} \nต้องการเพิ่มสินค้าใหม่หรือไม่ ? `)) {
+                        this.goToAddProduct(code);
+                    }
+                }
+            },
+
+            goToAddProduct(code) {
+                Router.go('products');
+                ProductManager.openModal(false, code);
+            },
+
+            beep(isError = false) {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (isError) {
+                    osc.frequency.value = 200;
+                    osc.type = 'sawtooth';
+                } else {
+                    osc.frequency.value = 1000;
+                    osc.type = 'sine';
+                }
+
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+                setTimeout(() => osc.stop(), 100);
+            }
+        };
+
+        // Scanner Listeners
+        $('#manual-barcode').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                Scanner.handleManualInput();
+            }
+        });
+
+
+        const Dashboard = {
+            render() {
+                const prod = Store.getProducts();
+                const hist = Store.get(Store.keys.DATA_HISTORY);
+
+                // Stats
+                // Revenue Today
+                const todayDate = new Date();
+                const today = todayDate.toDateString();
+                const dailyRev = hist
+                    .filter(h => h.action === 'out' && new Date(h.timestamp).toDateString() === today)
+                    .reduce((sum, h) => sum + (Math.abs(h.qty) * (h.meta && h.meta.price ? h.meta.price : 0)), 0);
+
+                $('#dash-revenue-today').previousElementSibling.innerText = `รายได้วันนี้ (${todayDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })})`;
+                $('#dash-revenue-today').innerText = formatMoney(dailyRev);
+                $('#dash-total-products').innerText = prod.length;
+
+                const totalValue = prod.reduce((acc, p) => acc + (p.price * p.stock), 0);
+                $('#dash-total-value').innerText = new Intl.NumberFormat('th-TH').format(totalValue);
+
+                const low = prod.filter(p => p.stock > 0 && p.stock <= p.minStock).length; const out = prod.filter(p =>
+                    p.stock === 0).length;
+
+                $('#dash-low-stock').innerText = low;
+                $('#dash-out-stock').innerText = out;
+
+                // Recent Transactions
+                const recent = hist.slice(0, 10);
+                $('#dash-recent-list').innerHTML = recent.map(h => `
+                    <tr>
+                        <td class="px-4 py-2 text-xs text-slate-500">${formatDate(h.timestamp)}</td>
+                        <td class="px-4 py-2">
+                            <div class="text-sm font-medium ${h.action === 'out' ? 'text-red-600' : 'text-green-600'}">
+                                ${h.action === 'out' ? 'ขายออก' : 'รับเข้า'} ${Math.abs(h.qty)}
+                            </div>
+                            <div class="text-xs text-slate-500">${h.productName}</div>
+                        </td>
+                        <td class="px-4 py-2 text-xs text-slate-500 text-center">${h.user}</td>
+                    </tr>
+                `).join('');
+
+                // Simple Chart Visualization
+                this.renderMiniChart(prod);
+            },
+
+            renderMiniChart(products) {
+                // Draw Pie Chart for stock status
+                const ctx = $('#dash-chart-pie');
+                if (!ctx) return;
+
+                // Set canvas resolution
+                ctx.width = 300;
+                ctx.height = 300;
+
+                const c = ctx.getContext('2d');
+                const normal = products.filter(p => p.stock > p.minStock).length;
+                const low = products.filter(p => p.stock <= p.minStock && p.stock > 0).length;
+                const out = products.filter(p => p.stock === 0).length;
+                const total = products.length || 1;
+
+                const data = [
+                    { value: normal, color: '#22c55e' }, // Green
+                    { value: low, color: '#f59e0b' }, // Amber
+                    { value: out, color: '#ef4444' } // Red
+                ];
+
+                let startAngle = 0;
+                const centerX = ctx.width / 2;
+                const centerY = ctx.height / 2;
+                const radius = 100;
+
+                // Clear
+                c.clearRect(0, 0, ctx.width, ctx.height);
+
+                data.forEach(slice => {
+                    if (slice.value === 0) return;
+                    const sliceAngle = (slice.value / total) * 2 * Math.PI;
+
+                    c.beginPath();
+                    c.moveTo(centerX, centerY);
+                    c.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+                    c.closePath();
+                    c.fillStyle = slice.color;
+                    c.fill();
+
+                    startAngle += sliceAngle;
+                });
+
+                // Inner Circle (Donut)
+                c.beginPath();
+                c.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI);
+                c.fillStyle = '#ffffff';
+                c.fill();
+
+                // Text
+                c.font = 'bold 24px Sarabun';
+                c.fillStyle = '#1e293b';
+                c.textAlign = 'center';
+                c.textBaseline = 'middle';
+                c.fillText(total, centerX, centerY);
+                c.font = '14px Sarabun';
+                c.fillStyle = '#94a3b8';
+                c.fillText('รายการ', centerX, centerY + 20);
+            }
+        };
+
+        const HistoryViewer = {
+            currentDate: new Date(),
+
+            render() {
+                // Update Date Picker input
+                const picker = $('#history-date-picker');
+                if (picker) {
+                    const yyyy = this.currentDate.getFullYear();
+                    const mm = String(this.currentDate.getMonth() + 1).padStart(2, '0');
+                    const dd = String(this.currentDate.getDate()).padStart(2, '0');
+                    picker.value = `${yyyy}-${mm}-${dd}`;
+                }
+
+                let hist = Store.get(Store.keys.DATA_HISTORY);
+
+                // Filter by Date
+                const selectedDateStr = this.currentDate.toDateString();
+                hist = hist.filter(h => new Date(h.timestamp).toDateString() === selectedDateStr);
+
+                const tbody = $('#history-list');
+
+                if (hist.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่มีรายการในวันที่เลือก</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = hist.map(h => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-6 py-3 text-xs text-slate-500">${formatDate(h.timestamp)}</td>
+                        <td class="px-6 py-3 text-sm font-medium text-blue-600">${h.user}</td>
+                        <td class="px-6 py-3 text-sm">
+                            <span class="px-2 py-1 rounded-full text-xs font-bold ${h.action === 'out' ? 'bg-red-100 text-red-700' : h.action === 'in' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}">
+                                ${h.action.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-sm">
+                            <div class="font-medium text-slate-800">${h.productName}</div>
+                            <div class="text-xs text-slate-400">${h.barcode}</div>
+                        </td>
+                        <td class="px-6 py-3 text-right font-mono font-bold ${h.qty > 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${h.qty > 0 ? '+' : ''}${h.qty}
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            handleDateChange(dateStr) {
+                if (dateStr) {
+                    this.currentDate = new Date(dateStr);
+                    this.render();
+                }
+            }
+        };
+
+        const Reports = {
+            render() {
+                // Implement Basic Canvas Bar Chart for Top Products
+                const hist = Store.get(Store.keys.DATA_HISTORY);
+                const sales = hist.filter(h => h.action === 'out');
+
+                // Aggregate
+                const summary = {};
+                sales.forEach(s => {
+                    if (!summary[s.productName]) summary[s.productName] = 0;
+                    summary[s.productName] += Math.abs(s.qty);
+                });
+
+                const sorted = Object.entries(summary).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+                this.drawBarChart(sorted);
+                this.drawDonutValue();
+            },
+
+            drawBarChart(data) {
+                const canvas = $('#report-chart-bar');
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = 300;
+                const ctx = canvas.getContext('2d');
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (data.length === 0) {
+                    ctx.font = '16px Sarabun';
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('ยังไม่มีข้อมูลการขาย', canvas.width / 2, canvas.height / 2);
+                    return;
+                }
+
+                const maxVal = Math.max(...data.map(d => d[1]));
+                const barWidth = 40;
+                const gap = 20;
+                const startX = 50;
+                const startY = canvas.height - 40;
+                const chartHeight = canvas.height - 60;
+
+                data.forEach((item, i) => {
+                    const h = (item[1] / maxVal) * chartHeight;
+                    const x = startX + (i * (barWidth + gap));
+                    const y = startY - h;
+
+                    // Bar
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fillRect(x, y, barWidth, h);
+
+                    // Value
+                    ctx.fillStyle = '#1e293b';
+                    ctx.textAlign = 'center';
+                    ctx.font = '12px Sarabun';
+                    ctx.fillText(item[1], x + barWidth / 2, y - 5);
+
+                    // Label (Truncated)
+                    ctx.fillStyle = '#64748b';
+                    let name = item[0];
+                    if (name.length > 8) name = name.substr(0, 8) + '..';
+                    ctx.fillText(name, x + barWidth / 2, startY + 15);
+                });
+            },
+
+            drawDonutValue() {
+                // Similar to dashboard but based on value by category
+                const products = Store.getProducts();
+                const byCat = {};
+                products.forEach(p => {
+                    const c = p.category || 'Other';
+                    if (!byCat[c]) byCat[c] = 0;
+                    byCat[c] += (p.price * p.stock);
+                });
+            }
+        };
+
+        const Notifications = {
+            render() {
+                const prod = Store.getProducts();
+                const low = prod.filter(p => p.stock <= p.minStock);
+                $('#noti-list').innerHTML = low.length === 0
+                    ? '<div class="p-8 text-center text-slate-400">ไม่มีการแจ้งเตือน</div>'
+                    : low.map(p => `
+                    <div class="p-4 border-l-4 ${p.stock === 0 ? 'border-red-500 bg-red-50' : 'border-amber-500 bg-amber-50'} flex justify-between items-center mb-1">
+                        <div>
+                            <div class="font-bold ${p.stock === 0 ? 'text-red-700' : 'text-amber-700'}">
+                                ${p.stock === 0 ? 'สินค้าหมด!' : 'สินค้าใกล้หมด'}
+                            </div>
+                            <div class="text-slate-600 text-sm">${p.name} (คงเหลือ: ${p.stock})</div>
+                        </div>
+                        <button onclick="Router.go('products')"
+                            class="text-sm px-3 py-1 bg-white border border-slate-200 rounded shadow-sm hover:bg-slate-50">
+                            จัดการ
+                        </button>
+                    </div>
+                `).join('');
+            },
+
+            check() {
+                // Update badge
+                const prod = Store.getProducts();
+                const count = prod.filter(p => p.stock <= p.minStock).length;
+                const badge = $('#mobile-noti-badge');
+                if (count > 0) {
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        };
+
+        const UserManager = {
+            render() {
+                const users = Store.get(Store.keys.DATA_USERS);
+                $('#users-list').innerHTML = users.map(u => `
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                ${u.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="font-bold text-slate-800">${u.name}</div>
+                                <div class="text-xs text-slate-500 capitalize">${u.role}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-sm text-slate-400 mr-2">ID: ${u.id}</div>
+                            ${users.length > 1 ? `
+                            <button onclick="UserManager.del(${u.id})" class="text-slate-400 hover:text-red-500 transition" title="ลบผู้ใช้งาน">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            openModal() {
+                $('#user-form').reset();
+                $('#modal-user').classList.remove('hidden');
+                setTimeout(() => $('#u-username').focus(), 100);
+            },
+
+            closeModal() {
+                $('#modal-user').classList.add('hidden');
+            },
+
+            save(e) {
+                e.preventDefault();
+                const username = $('#u-username').value.trim();
+                const password = $('#u-password').value.trim(); // Simplified, should be stronger
+                const name = $('#u-name').value.trim();
+                const role = $('#u-role').value;
+
+                if (!username || !password || !name) {
+                    showToast('กรุณากรอกข้อมูลให้ครบ', 'error');
+                    return;
+                }
+
+                const users = Store.get(Store.keys.DATA_USERS);
+                if (users.find(u => u.username === username)) {
+                    showToast('Username นี้มีอยู่แล้ว', 'error');
+                    return;
+                }
+
+                users.push({
+                    id: Date.now(),
+                    username,
+                    password,
+                    role,
+                    name
+                });
+
+                Store.set(Store.keys.DATA_USERS, users);
+                showToast('เพิ่มผู้ใช้งานแล้ว', 'success');
+                this.closeModal();
+                this.render();
+            },
+
+            del(id) {
+                if (!confirm('ยืนยันลบผู้ใช้งานนี้?')) return;
+                let users = Store.get(Store.keys.DATA_USERS);
+
+                // Prevent deleting self if logged in (optional but good UX)
+                if (Auth.user && Auth.user.id === id) {
+                    showToast('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่ได้', 'error');
+                    return;
+                }
+
+                users = users.filter(u => u.id !== id);
+                Store.set(Store.keys.DATA_USERS, users);
+                showToast('ลบผู้ใช้งานแล้ว', 'success');
+                this.render();
+            }
+        };
+
+        // Bind User Form
+        $('#user-form').onsubmit = (e) => UserManager.save(e);
+
+        const App = {
+            init() {
+                Store.init();
+                Auth.check();
+
+                // Global Listeners
+                $('#login-form').onsubmit = (e) => {
+                    e.preventDefault();
+                    Auth.login($('#username').value, $('#password').value);
+                };
+
+                $('#register-form').onsubmit = (e) => Auth.register(e);
+                $('#recovery-form').onsubmit = (e) => Auth.recover(e);
+            },
+
+            toggleNotifications() {
+                Router.go('notifications');
+            }
+        };
+
+        // Start
+        App.init();
+
+    </script>
+</body>
+
+</html>
